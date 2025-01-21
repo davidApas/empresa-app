@@ -34,7 +34,7 @@ class Personas extends Component
 
     public function render()
     {
-        return view('livewire.persona')->layout('layouts.app'); // Usar el diseño de Jetstream
+        return view('livewire.persona'); // Usar el diseño de Jetstream
     }
 
     public function showModal($id=null)
