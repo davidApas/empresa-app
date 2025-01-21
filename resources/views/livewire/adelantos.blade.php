@@ -1,188 +1,123 @@
-<div class="p-6">
-    <h2 class="text-lg font-bold mb-4">Lista de Adelantos</h2>
- 
-    <div class="flex items-center space-x-2 mb-4">
-    <!-- Lista desplegable de personas -->
-    <div class="space-y-4 p-6 bg-white shadow-lg rounded-lg">
-    <!-- Selector de Persona -->
-    <div>
-        <label for="persona" class="block text-sm font-medium text-gray-700">Seleccionar Persona:</label>
-        <select 
-            id="persona"
-            class="form-select mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
-            wire:model="selectedPersonaId">
-            <option value="" class="text-gray-500">-- Seleccionar Persona --</option>
-            @foreach ($personas as $persona)
-                <option value="{{ $persona->id }}" class="text-gray-700">
-                    {{ $persona->Nombre }} {{ $persona->Apellido }}
-                    @if ($persona->trashed()) (Eliminado) @endif
-                </option>
-            @endforeach
-        </select>
-    </div>
+<div class="p-6 space-y-6">
+    <!-- Encabezado -->
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h2 class="text-2xl font-bold text-gray-800 border-b pb-4 mb-6">Lista de Adelantos</h2>
 
-    <!-- Filtros y Botones -->
-    <div class="flex items-center gap-4">
-        <!-- Botón para buscar adelantos -->
-        <button 
-            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow focus:outline-none focus:ring-2 focus:ring-blue-400"
-            wire:click="buscarAdelantos">
-            Buscar
-        </button>
-
-        <!-- Filtro por fecha -->
-        <div>
-            <label for="selectedDate" class="block text-sm font-medium text-gray-700">Filtrar por Fecha:</label>
-            <input 
-                type="date" 
-                id="selectedDate" 
-                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                wire:model="selectedDate">
-        </div>
-
-        <!-- Botones para filtrar y limpiar -->
-        <div class="flex gap-2">
-            <button 
-                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow focus:outline-none focus:ring-2 focus:ring-green-400"
-                wire:click="loadAdelantos">
-                Filtrar
-            </button>
-            <button 
-                class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded shadow focus:outline-none focus:ring-2 focus:ring-gray-400"
-                wire:click="$set('selectedDate', null)">
-                Limpiar Filtro
-            </button>
-        </div>
-    </div>
-
-    <!-- Botones principales -->
-    <div class="flex justify-between items-center">
-        <!-- Botón para agregar adelanto -->
-        <button 
-            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow focus:outline-none focus:ring-2 focus:ring-blue-400"
-            wire:click="showModal">
-            Agregar Adelanto
-        </button>
-
-        <!-- Botón para descargar PDF -->
-        <button 
-            class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded shadow focus:outline-none focus:ring-2 focus:ring-red-400"
-            wire:click="descargarPDF">
-            Descargar PDF
-        </button>
-    </div>
-</div>
-</div>
-
-    <!-- Tabla de adelantos -->
-    <table class="table-auto w-full border-collapse border border-gray-200 mt-4">
-        <thead>
-            <tr>
-                <th class="border border-gray-300 px-4 py-2">ID</th>
-                <th class="border border-gray-300 px-4 py-2">Nombre</th>
-                <th class="border border-gray-300 px-4 py-2">Apellido</th>
-                <th class="border border-gray-300 px-4 py-2">Fecha</th>
-                <th class="border border-gray-300 px-4 py-2">Monto</th>
-                <th class="border border-gray-300 px-4 py-2">Entregado Por</th>
-                <th class="border border-gray-300 px-4 py-2">Descripción</th>
-                <th class="border border-gray-300 px-4 py-2">Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($adelantos as $adelanto)
-                <tr>
-                    <td class="border border-gray-300 px-4 py-2">{{ $adelanto->id }}</td>
-                    <td class="border border-gray-300 px-4 py-2">{{ $adelanto->persona->Nombre }}</td>
-                    <td class="border border-gray-300 px-4 py-2">{{ $adelanto->persona->Apellido }}</td>
-                    <td class="border border-gray-300 px-4 py-2">{{ $adelanto->Fecha }}</td>
-                    <td class="border border-gray-300 px-4 py-2">{{ $adelanto->Monto }}</td>
-                    <td class="border px-4 py-2">
-                    {{ $adelanto->entregadoPor ? $adelanto->entregadoPor->Nombre . ' ' . $adelanto->entregadoPor->Apellido : 'Sin asignar' }}
-                </td>
-                    <td class="border border-gray-300 px-4 py-2">{{ $adelanto->Descripcion }}</td>
-                    <td class="border border-gray-300 px-4 py-2">
-
-                    <!-- Botón Editar -->
-
-                    <button class="bg-yellow-500 text-white px-4 py-2 rounded" wire:click="showModal({{ $adelanto->id }})">
-                        Editar
-                    </button>
-
-                    <!-- Botón Borrar -->
-                    <button 
-                        wire:click="borrarAdelanto({{ $adelanto->id }})" 
-                        class="px-4 py-2 text-white bg-red-600 rounded hover:bg-red-700"
-                    >
-                    Borrar
-                    </button>
-
-                    </td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="7" class="text-center py-4">No hay adelantos disponibles.</td>
-                </tr>
-            @endforelse
-        </tbody>
-    </table>
-    <!-- Modal -->
-    @if($modalVisible)
-        <div class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-            <div class="bg-white p-6 rounded shadow-md w-1/3">
-                <h2 class="text-lg font-bold mb-4">Agregar Adelanto</h2>
-
-                <form wire:submit.prevent="store">
-                    <div class="mb-4">
-                    <label for="persona" class="block text-sm font-medium">Persona</label>
-    <select wire:model="ID_Persona" class="w-full border-gray-300 rounded-md shadow-sm">
-        <option value="">Seleccionar Persona</option>
-        @foreach($personas as $persona)
-            <option value="{{ $persona->id }}">{{ $persona->Nombre }} {{ $persona->Apellido }}</option>
+        <!-- Controles superiores -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- Selector de Persona -->
+            <div class="bg-white rounded-lg p-4 border border-gray-200">
+    <label for="persona" class="block text-sm font-medium text-gray-700 mb-2">Seleccionar Persona:</label>
+    <select 
+        id="persona"
+        class="w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+        wire:model="selectedPersonaId">
+        <option value="" class="text-gray-500">-- Seleccionar Persona --</option>
+        @foreach ($personas as $persona)
+            <option value="{{ $persona->id }}" class="text-gray-700">
+                {{ $persona->Nombre }} {{ $persona->Apellido }}
+                @if ($persona->trashed()) (Inactivo) @endif
+            </option>
         @endforeach
     </select>
-    @error('ID_Persona') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
-                    </div>
+    <button 
+        type="button" 
+        class="mt-4 bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
+        wire:click="loadAdelantos">
+        Buscar
+    </button>
+</div>
 
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium">Fecha</label>
-                        <input type="datetime-local" wire:model="fecha" class="w-full border-gray-300 rounded-md shadow-sm">
-                        @error('fecha') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium">Monto</label>
-                        <input type="number" wire:model="monto" class="w-full border-gray-300 rounded-md shadow-sm">
-                        @error('monto') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
-                    </div>
-
-                    <div class="mb-4">
-                    <label class="block text-sm font-medium">Entregado Por</label>
-                    <select wire:model="entregadoPor" class="w-full border-gray-300 rounded-md shadow-sm">
-                        <option value="">Seleccionar Líder</option>
-                        @foreach($lideres as $lider)
-                            <option value="{{ $lider->id }}">{{ $lider->Nombre }} {{ $lider->Apellido }}</option>
-                        @endforeach
-                    </select>
-                    @error('entregadoPor') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
-                </div>
-
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium">Descripción</label>
-                        <textarea wire:model="descripcion" class="w-full border-gray-300 rounded-md shadow-sm"></textarea>
-                        @error('descripcion') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
-                    </div>
-
-                    <div class="flex justify-end">
-                        <button type="button" class="bg-gray-300 text-black px-4 py-2 rounded mr-2" wire:click="hideModal">
-                            Cancelar
-                        </button>
-                        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">
-                            Guardar
-                        </button>
-                    </div>
-                </form>
+            <!-- Botones principales -->
+            <div class="flex items-center gap-4 justify-end">
+                <button 
+                    class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow transition-colors duration-150 ease-in-out"
+                    wire:click="$set('modalFiltro', true)">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                    </svg>
+                    Filtrar
+                </button>
+                <button 
+                    class="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow transition-colors duration-150 ease-in-out"
+                    wire:click="showModal">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Nuevo Adelanto
+                </button>
+                <button 
+                    class="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg shadow transition-colors duration-150 ease-in-out"
+                    wire:click="descargarPDF">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Descargar PDF
+                </button>
             </div>
         </div>
-    @endif
+    </div>
 
+    <!-- Tabla de adelantos -->
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Apellido</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entregado Por</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    @forelse($adelantos as $adelanto)
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $adelanto->id }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $adelanto->persona->Nombre }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $adelanto->persona->Apellido }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $adelanto->Fecha }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${{ number_format($adelanto->Monto, 2) }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ optional($adelanto->entregadoPor)->Nombre . ' ' . optional($adelanto->entregadoPor)->Apellido ?? 'Sin Asignar' }}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-900">{{ $adelanto->Descripcion }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                <button 
+                                    class="inline-flex items-center px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded-md transition-colors duration-150"
+                                    wire:click="showModal({{ $adelanto->id }})">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
+                                    Editar
+                                </button>
+                                <button 
+                                    class="inline-flex items-center px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors duration-150"
+                                    wire:click="borrarAdelanto({{ $adelanto->id }})">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                    Borrar
+                                </button>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="8" class="px-6 py-4 text-center text-gray-500">No hay adelantos disponibles.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    
+
+    <!-- Modales -->
+    @include('livewire.modal-filtro-adelantos')
+    @include('livewire.modal-nuevo-adelanto')
 </div>

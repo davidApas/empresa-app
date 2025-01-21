@@ -17,4 +17,9 @@ class Adelanto extends Model
 
     }
     
+    public function entregadoPor()
+    {
+        return $this->belongsTo(Persona::class, 'Entregado_Por', 'id');
+    }
+    
 }

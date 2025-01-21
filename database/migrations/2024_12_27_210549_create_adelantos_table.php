@@ -14,7 +14,7 @@ class CreateAdelantosTable extends Migration
             $table->foreign('ID_Persona')->references('id')->on('personas')->onDelete('cascade');
             $table->dateTime('Fecha');
             $table->decimal('Monto', 10, 2);
-            $table->string('Entregado_Por');
+            $table->foreignId('Entregado_Por')->constrained('personas')->onDelete('cascade'); // Clave foránea
             $table->text('Descripcion')->nullable();
             $table->softDeletes();
             $table->timestamps();

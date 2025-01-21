@@ -6,6 +6,7 @@ use App\Models\Persona;
 use App\Models\Adelanto;
 use Livewire\Component;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 
 class Adelantos extends Component
 {
@@ -20,7 +21,12 @@ class Adelantos extends Component
     public $modalVisible = false;
     public $ID_Persona;
     public $personaSeleccionada, $fecha, $monto, $entregadoPor, $descripcion;
+    public $modalFiltro;
 
+    public $filtro = [
+        'fechaDesde' => null,
+        'fechaHasta' => null,
+    ];
     protected $rules = [
         'ID_Persona' => 'required|exists:personas,id',
         'fecha' => 'required|date',
@@ -53,6 +59,7 @@ class Adelantos extends Component
     // Inicia una consulta base para Adelanto
     $query = Adelanto::with('persona');
 
+
     // Aplica el filtro por persona seleccionada si existe
     if ($this->selectedPersonaId) {
         $query->where('ID_Persona', $this->selectedPersonaId);
@@ -64,9 +71,7 @@ class Adelantos extends Component
     }
 
     // Obtén los resultados de la consulta
-    $this->adelantos = $query->get();
-    //
-    $this->adelantos = Adelanto::with(['persona', 'Entregado_Por'])->get();
+    $this->adelantos = $query->get(); 
 }
 
 
@@ -94,37 +99,37 @@ public function showModal($id = null)
         $this->modalVisible = false;
     }
     
-    public function store()
-{
-    $this->validate();
+        public function store()
+    {
+        $this->validate();
 
-    if ($this->adelantoId) {
-        // Actualizar un adelanto existente
-        $adelanto = Adelanto::findOrFail($this->adelantoId);
-        $adelanto->update([
-            'ID_Persona' => $this->ID_Persona,
-            'Fecha' => $this->fecha,
-            'Monto' => $this->monto,
-            'Entregado_Por' => $this->entregadoPor,
-            'Descripcion' => $this->descripcion,
-        ]);
-        $this->alert('success', 'Adelanto actualizado correctamente.');
-    } else {
-        // Crear un nuevo adelanto
-        Adelanto::create([
-            'ID_Persona' => $this->ID_Persona,
-            'Fecha' => $this->fecha,
-            'Monto' => $this->monto,
-            'Entregado_Por' => $this->entregadoPor,
-            'Descripcion' => $this->descripcion,
-        ]);
-        $this->alert('success', 'Adelanto creado correctamente.');
+        if ($this->adelantoId) {
+            // Actualizar un adelanto existente
+            $adelanto = Adelanto::findOrFail($this->adelantoId);
+            $adelanto->update([
+                'ID_Persona' => $this->ID_Persona,
+                'Fecha' => $this->fecha,
+                'Monto' => $this->monto,
+                'Entregado_Por' => $this->entregadoPor,
+                'Descripcion' => $this->descripcion,
+            ]);
+            $this->alert('success', 'Adelanto actualizado correctamente.');
+        } else {
+            // Crear un nuevo adelanto
+            Adelanto::create([
+                'ID_Persona' => $this->ID_Persona,
+                'Fecha' => $this->fecha,
+                'Monto' => $this->monto,
+                'Entregado_Por' => $this->entregadoPor,
+                'Descripcion' => $this->descripcion,
+            ]);
+            $this->alert('success', 'Adelanto creado correctamente.');
+        }
+
+        $this->resetInputFields();
+        $this->hideModal();
+        $this->loadAdelantos(); // Recarga la lista de adelantos
     }
-
-    $this->resetInputFields();
-    $this->hideModal();
-    $this->loadAdelantos(); // Recarga la lista de adelantos
-}
 
     
     private function resetInputFields()
@@ -164,7 +169,9 @@ public function showModal($id = null)
 
     public function render()
     {
-        return view('livewire.adelantos')->layout('layouts.app');
+        return view('livewire.adelantos', [
+        'adelantos' => $this->loadAdelantos() // Recargar adelantos automáticamente
+    ]);
     }
 
 
@@ -222,29 +229,60 @@ public function showModal($id = null)
 
 
 
-public function descargarPDF()
+    public function descargarPDF()
+    {
+        $datos = $this->adelantos->map(function ($adelanto) {
+            return [
+                'Persona' => $adelanto->persona->Nombre . ' ' . $adelanto->persona->Apellido,
+                'Fecha' => $adelanto->Fecha,
+                'Monto' => $adelanto->Monto,
+                'Entregado Por' => $adelanto->entregadoPor->Nombre .' '. $adelanto->entregadoPor->Apellido, // Acceso correcto
+                'Descripción' => $adelanto->Descripcion,
+            ];
+        });
+
+        $pdf = Pdf::loadView('pdf.adelantos', ['adelantos' => $datos]);
+        return response()->streamDownload(
+            fn () => print($pdf->output()),
+            'adelantos.pdf'
+        );
+    }
+    public function aplicarFiltros()
 {
-    $datos = $this->adelantos->map(function ($adelanto) {
-        return [
-            'Persona' => $adelanto->persona->Nombre . ' ' . $adelanto->persona->Apellido,
-            'Fecha' => $adelanto->Fecha,
-            'Monto' => $adelanto->Monto,
-            'Entregado Por' => $adelanto->Entregado_Por,
-            'Descripción' => $adelanto->Descripcion,
+    $query = Adelanto::with('persona');
+
+    // Verifica si se especificó una fecha de inicio
+    if ($this->filtro['fechaDesde']) {
+        $fechaDesde = Carbon::parse($this->filtro['fechaDesde'])->startOfDay();
+        $query->where('Fecha', '>=', $fechaDesde);
+    }
+
+    // Verifica si se especificó una fecha de fin
+    if ($this->filtro['fechaHasta']) {
+        $fechaHasta = Carbon::parse($this->filtro['fechaHasta'])->endOfDay();
+        $query->where('Fecha', '<=', $fechaHasta);
+    }
+
+    $this->adelantos = $query->get(); // Actualiza los resultados de la consulta
+    $this->modalFiltro = false; // Cierra el modal
+}
+    
+    public function limpiarFiltros()
+    {
+        // Reinicia los filtros a sus valores iniciales
+        $this->filtro = [
+            'fechaDesde' => null,
+            'fechaHasta' => null,
         ];
-    });
-
-    $pdf = Pdf::loadView('pdf.adelantos', ['adelantos' => $datos]);
-    return response()->streamDownload(
-        fn () => print($pdf->output()),
-        'adelantos.pdf'
-    );
-}
-// Modelo Adelanto.php
-public function entregadoPor()
-{
-    return $this->belongsTo(Persona::class, 'entregadoPor'); // Clave foránea en la tabla adelantos
-}
-
-
+    
+        // Recarga todos los adelantos sin aplicar filtros
+        $this->adelantos = Adelanto::with('persona')->get();
+    
+        // Cierra el modal de filtros
+        $this->modalFiltro = false;
+    
+        // Muestra una alerta informativa
+        $this->alert('info', 'Filtros limpiados.');
+    }
+    
 }
