@@ -38,13 +38,9 @@
                     </button>
 
                      <!-- Botón Borrar -->
-                <button 
-                    wire:click="delete({{ $persona->id }})" 
-                    class="px-4 py-2 text-white bg-red-600 rounded hover:bg-red-700"
-                    onclick="return confirm('¿Estás seguro de que deseas eliminar esta persona?');"
-                >
-                    Borrar
-                </button>
+                     <button wire:click="confirmarBorrado({{ $persona->id }})" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                        Borrar
+                    </button>
                     </td>
                 </tr>
             @endforeach

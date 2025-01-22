@@ -36,7 +36,7 @@
                 <tr>
                     <td>{{ $adelanto['Persona'] }}</td>
                     <td>{{ $adelanto['Fecha'] }}</td>
-                    <td>{{ $adelanto['Monto'] }}</td>
+                    <td>{{ number_format($adelanto['Monto'], 2, ',', '.') }}</td>
                     <td>{{ $adelanto['Entregado Por'] }}</td>
                     <td>{{ $adelanto['Descripción'] }}</td>
                 </tr>

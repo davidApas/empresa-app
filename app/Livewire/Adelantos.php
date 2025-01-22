@@ -36,18 +36,18 @@ class Adelantos extends Component
     ];
 
     public function mount()
-{
-    $this->adelantos = Adelanto::with('persona')->get();
-    $this->personas = Persona::withTrashed()
-        ->orderByRaw('CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END')
-        ->orderBy('Nombre')
-        ->orderBy('Apellido')
-        ->get();
-        $this->selectedDate = null; // Inicializar el filtro de fecha como nulo
-        $this->lideres = Persona::where('Puesto_Trabajo', 'Líder')->get(); // Solo líderes
-}
-
-    
+    {
+        $this->adelantos = Adelanto::with('persona')
+            ->orderBy('Fecha', 'desc')  // o ->latest() si prefieres por created_at
+            ->get();
+        $this->personas = Persona::withTrashed()
+            ->orderByRaw('CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END')
+            ->orderBy('Nombre')
+            ->orderBy('Apellido')
+            ->get();
+            $this->selectedDate = null; // Inicializar el filtro de fecha como nulo
+            $this->lideres = Persona::where('Puesto_Trabajo', 'Líder')->get(); // Solo líderes
+    }
 
     public function updatedSelectedPersonaId()
     {
@@ -55,44 +55,57 @@ class Adelantos extends Component
     }
 
     public function loadAdelantos()
-{
-    // Inicia una consulta base para Adelanto
-    $query = Adelanto::with('persona');
+    {
+        $query = Adelanto::with(['persona' => function ($query) {
+            $query->withTrashed()
+                ->orderByRaw('CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END')
+                ->orderBy('Nombre')
+                ->orderBy('Apellido');
+        }]);
 
+        // Aplica el filtro por persona seleccionada
+        if ($this->selectedPersonaId) {
+            $query->where('ID_Persona', $this->selectedPersonaId);
+        }
 
-    // Aplica el filtro por persona seleccionada si existe
-    if ($this->selectedPersonaId) {
-        $query->where('ID_Persona', $this->selectedPersonaId);
+        // Aplica el filtro por fecha seleccionada
+        if ($this->selectedDate) {
+            $query->whereDate('Fecha', $this->selectedDate);
+        }
+
+        // Aplica los filtros de rango de fecha
+        if ($this->filtro['fechaDesde']) {
+            $fechaDesde = Carbon::parse($this->filtro['fechaDesde'])->startOfDay();
+            $query->where('Fecha', '>=', $fechaDesde);
+        }
+
+        if ($this->filtro['fechaHasta']) {
+            $fechaHasta = Carbon::parse($this->filtro['fechaHasta'])->endOfDay();
+            $query->where('Fecha', '<=', $fechaHasta);
+        }
+        $query->orderBy('Fecha', 'desc');
+        $this->adelantos = $query->get();
     }
 
-    // Aplica el filtro por fecha seleccionada si existe
-    if ($this->selectedDate) {
-        $query->whereDate('Fecha', $this->selectedDate);
+
+    public function showModal($id = null)
+    {
+        $this->resetInputFields(); // Limpia campos previos
+
+        if ($id) {
+            $this->adelantoId = $id;
+            $adelanto = Adelanto::findOrFail($id);
+
+            // Carga los datos en las propiedades
+            $this->ID_Persona = $adelanto->ID_Persona;
+            $this->fecha = $adelanto->Fecha;
+            $this->monto = $adelanto->Monto;
+            $this->entregadoPor = $adelanto->Entregado_Por;
+            $this->descripcion = $adelanto->Descripcion;
+        }
+
+        $this->modalVisible = true; // Muestra el modal
     }
-
-    // Obtén los resultados de la consulta
-    $this->adelantos = $query->get(); 
-}
-
-
-public function showModal($id = null)
-{
-    $this->resetInputFields(); // Limpia campos previos
-
-    if ($id) {
-        $this->adelantoId = $id;
-        $adelanto = Adelanto::findOrFail($id);
-
-        // Carga los datos en las propiedades
-        $this->ID_Persona = $adelanto->ID_Persona;
-        $this->fecha = $adelanto->Fecha;
-        $this->monto = $adelanto->Monto;
-        $this->entregadoPor = $adelanto->Entregado_Por;
-        $this->descripcion = $adelanto->Descripcion;
-    }
-
-    $this->modalVisible = true; // Muestra el modal
-}
 
     public function hideModal()
     {
@@ -142,102 +155,97 @@ public function showModal($id = null)
     }
     
     public function buscarAdelantos()
-{
-    // Inicia la consulta base
-    $query = Adelanto::with(['persona' => function ($query) {
-        $query->withTrashed()
-            ->orderByRaw('CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END')
-            ->orderBy('Nombre')
-            ->orderBy('Apellido');
-    }]);
-
-    // Aplica el filtro por persona seleccionada, si existe
-    if ($this->selectedPersonaId) {
-        $query->where('ID_Persona', $this->selectedPersonaId);
-    }
-
-    // Aplica el filtro por fecha seleccionada, si existe
-    if ($this->selectedDate) {
-        $query->whereDate('Fecha', $this->selectedDate);
-    }
-
-    // Obtén los resultados y almacénalos en $adelantos
-    $this->adelantos = $query->get();
-}
-
-    
-
-    public function render()
     {
-        return view('livewire.adelantos', [
-        'adelantos' => $this->loadAdelantos() // Recargar adelantos automáticamente
-    ]);
-    }
+        // Inicia la consulta base
+        $query = Adelanto::with(['persona' => function ($query) {
+            $query->withTrashed()
+                ->orderByRaw('CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END')
+                ->orderBy('Nombre')
+                ->orderBy('Apellido');
+        }]);
 
-
-    public function confirmarBorrado($adelantoId)
-    {
-        $this->adelantoId = $adelantoId;
-
-        // Lanza el popup de confirmación
-        $this->alert('warning', '¿Estás seguro de que deseas borrar este adelanto?', [
-            'showConfirmButton' => true,
-            'confirmButtonText' => 'Sí, borrar',
-            'showCancelButton' => true,
-            'cancelButtonText' => 'Cancelar',
-            'onConfirmed' => 'borrarAdelanto',  // Método a ejecutar si el usuario confirma
-            'onDismissed' => 'cancelarBorrado', // Método a ejecutar si el usuario cancela
-            'timer' => null,
-            'position' => 'center',
-            'toast' => null,
-        ]);
-    }
-
-    #[On('borrarAdelanto')]
-    public function borrarAdelanto($adelantoId)
-    {
-        $adelanto = Adelanto::find($adelantoId);
-
-        if ($adelanto) {
-            $adelanto->delete(); // Elimina el adelanto
-            $this->alert('success', 'El adelanto se eliminó correctamente.', [
-                'position' => 'center',
-                'toast' => null,
-            ]);
-        } else {
-            $this->alert('error', 'No se encontró el adelanto.', [
-                'position' => 'center',
-                'toast' => null,
-            ]);
+        // Aplica el filtro por persona seleccionada, si existe
+        if ($this->selectedPersonaId) {
+            $query->where('ID_Persona', $this->selectedPersonaId);
         }
 
-        $this->adelantoId = null; // Limpia el ID del adelanto
-        $this->adelantos = Adelanto::all(); // Actualizar la lista
+        // Aplica el filtro por fecha seleccionada, si existe
+        if ($this->selectedDate) {
+            $query->whereDate('Fecha', $this->selectedDate);
+        }
+
+        // Obtén los resultados y almacénalos en $adelantos
+        $this->adelantos = $query->get();
     }
 
-    #[On('cancelarBorrado')]
+    
+    public function render()
+    {
+        return view('livewire.adelantos');
+    }
+
+
+    public function confirmarBorrado($id)
+    {
+        $this->adelantoId = $id;
+
+        $this->alert('warning', '¿Estás seguro de que deseas borrar este adelanto?', [
+            'position' => 'center',
+            'timer' => null,
+            'toast' => false,
+            'showConfirmButton' => true,
+            'onConfirmed' => 'eliminarAdelanto',
+            'showCancelButton' => true,
+            'onDismissed' => 'cancelarBorrado',
+            'confirmButtonText' => 'Sí, eliminar',
+            'cancelButtonText' => 'No, cancelar',
+        ]);
+    }
+
+
+    protected function getListeners()
+    {
+        return [
+            'eliminarAdelanto',
+            'cancelarBorrado'
+        ];
+    }
+
+
+    public function eliminarAdelanto()
+    {
+        try {
+            $adelanto = Adelanto::find($this->adelantoId);
+            if ($adelanto) {
+                $adelanto->delete();
+                $this->loadAdelantos();
+                $this->alert('success', 'Adelanto eliminado correctamente');
+            }
+        } catch (\Exception $e) {
+            $this->alert('error', 'Ocurrió un error al eliminar el adelanto');
+        }
+    }
+
+
     public function cancelarBorrado()
     {
-        // Mensaje de cancelación opcional
-        $this->alert('info', 'La eliminación fue cancelada.', [
-            'position' => 'center',
-            'toast' => null,
-        ]);
-
-        $this->adelantoId = null; // Limpia el ID del adelanto
+        $this->adelantoId = null;
+        $this->alert('info', 'Operación cancelada');
     }
 
-
-
-    public function descargarPDF()
+        public function descargarPDF()
     {
         $datos = $this->adelantos->map(function ($adelanto) {
             return [
-                'Persona' => $adelanto->persona->Nombre . ' ' . $adelanto->persona->Apellido,
+                'Persona' => $adelanto->persona 
+                    ? $adelanto->persona->Nombre . ' ' . $adelanto->persona->Apellido 
+                    : 'No especificado',
                 'Fecha' => $adelanto->Fecha,
                 'Monto' => $adelanto->Monto,
-                'Entregado Por' => $adelanto->entregadoPor->Nombre .' '. $adelanto->entregadoPor->Apellido, // Acceso correcto
-                'Descripción' => $adelanto->Descripcion,
+                'Entregado Por' => $adelanto->entregadoPor 
+                    ? $adelanto->entregadoPor->Nombre . ' ' . $adelanto->entregadoPor->Apellido 
+                    : 'No especificado',
+                'Descripción' => $adelanto->Descripcion ?? 'Sin descripción',
             ];
         });
 
@@ -247,25 +255,15 @@ public function showModal($id = null)
             'adelantos.pdf'
         );
     }
+
+
     public function aplicarFiltros()
-{
-    $query = Adelanto::with('persona');
-
-    // Verifica si se especificó una fecha de inicio
-    if ($this->filtro['fechaDesde']) {
-        $fechaDesde = Carbon::parse($this->filtro['fechaDesde'])->startOfDay();
-        $query->where('Fecha', '>=', $fechaDesde);
+    {
+        $this->loadAdelantos();
+        $this->modalFiltro = false;
+        $this->alert('success', 'Filtros aplicados correctamente.');
     }
-
-    // Verifica si se especificó una fecha de fin
-    if ($this->filtro['fechaHasta']) {
-        $fechaHasta = Carbon::parse($this->filtro['fechaHasta'])->endOfDay();
-        $query->where('Fecha', '<=', $fechaHasta);
-    }
-
-    $this->adelantos = $query->get(); // Actualiza los resultados de la consulta
-    $this->modalFiltro = false; // Cierra el modal
-}
+      
     
     public function limpiarFiltros()
     {

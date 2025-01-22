@@ -4,9 +4,10 @@ namespace App\Livewire;
 
 use App\Models\Persona;
 use Livewire\Component;
+use Jantinnerezo\LivewireAlert\LivewireAlert;
 class Personas extends Component
 {
-    // use LivewireAlert;
+    use LivewireAlert;
 
     public $personaId;
     public $personas;
@@ -29,7 +30,7 @@ class Personas extends Component
 
     public function mount()
     {
-        $this->personas = Persona::all();
+        $this->personas = Persona::orderBy('Apellido', 'asc')->get();
     }
 
     public function render()
@@ -95,14 +96,57 @@ class Personas extends Component
         $this->puestoTrabajo = '';
     }
 
-    public function delete($id)
-{
-    $persona = Persona::findOrFail($id);
-    $persona->delete();
+        public function delete($id)
+    {
+        $persona = Persona::findOrFail($id);
+        $persona->delete();
 
-    $this->personas = Persona::all(); // Actualizar la lista
-    session()->flash('message', 'Persona eliminada exitosamente.');
-}
+        $this->personas = Persona::all(); // Actualizar la lista
+        session()->flash('message', 'Persona eliminada exitosamente.');
+    }
 
+    public function confirmarBorrado($id)
+    {
+        $this->personaId = $id;
 
+        $this->alert('warning', '¿Estás seguro de que deseas eliminar esta persona?', [
+            'position' => 'center',
+            'timer' => null,
+            'toast' => false,
+            'showConfirmButton' => true,
+            'onConfirmed' => 'eliminarPersona',
+            'showCancelButton' => true,
+            'onDismissed' => 'cancelarBorrado',
+            'confirmButtonText' => 'Sí, eliminar',
+            'cancelButtonText' => 'No, cancelar',
+        ]);
+    }
+
+    protected function getListeners()
+    {
+        return [
+            'eliminarPersona',
+            'cancelarBorrado'
+        ];
+    }
+
+    public function eliminarPersona()
+    {
+        try {
+            $persona = Persona::find($this->personaId);
+            if ($persona) {
+                $persona->delete();
+                $this->personas = Persona::all();
+                $this->alert('success', 'Persona eliminada correctamente');
+            }
+        } catch (\Exception $e) {
+            $this->alert('error', 'Ocurrió un error al eliminar la persona');
+        }
+    }
+
+    public function cancelarBorrado()
+    {
+        $this->personaId = null;
+        $this->alert('info', 'Operación cancelada');
+    }
 }
