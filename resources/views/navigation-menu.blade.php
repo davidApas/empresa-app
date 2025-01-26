@@ -21,6 +21,9 @@
                     <x-nav-link href="{{ route('persona') }}" :active="request()->routeIs('persona')">
                         Persona
                     </x-nav-link>
+                    <x-nav-link href="{{ route('pago') }}" :active="request()->routeIs('pago')">
+    Pago
+</x-nav-link>
                 </div>
             </div>
 
